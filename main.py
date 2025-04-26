@@ -1,8 +1,11 @@
 from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy import BigInteger, String, Date, Enum, func, select
+
+import secrets
 
 from pydantic import BaseModel, EmailStr, field_validator
 
@@ -89,6 +92,10 @@ class UserRegistrationSchema(BaseModel):
     password: str
     password_confirm: str
 
+class UserLoginSchema(BaseModel):
+    login: str
+    password: str
+
     @field_validator('username')
     def validate_username(cls, username):
         if len(username) < 3:
@@ -117,7 +124,7 @@ def hashing_password(password: str) -> str:
     return pwd_context.hash(password)
 
 @app.post('/register')
-async def register(session: SessionDep, user_data: UserRegistrationSchema):
+async def register(user_data: UserRegistrationSchema, session: SessionDep):
     is_user_exist = await session.execute(
         select(UserModel).where(
             (UserModel.email == user_data.email) |
@@ -130,7 +137,7 @@ async def register(session: SessionDep, user_data: UserRegistrationSchema):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail='Пользователь с таким адресом электронной почты или логином уже существует.'
         )
-    print(user_data.password, user_data.password_confirm)
+
     if user_data.password != user_data.password_confirm:
         print(user_data.password, user_data.password_confirm)
         raise HTTPException (
