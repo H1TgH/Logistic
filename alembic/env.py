@@ -3,6 +3,7 @@ from logging.config import fileConfig
 
 from src.database import Base
 from src.users.models import UserModel
+from src.reviews.models import ReviewModel
 
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
