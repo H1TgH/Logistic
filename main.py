@@ -92,10 +92,6 @@ class UserRegistrationSchema(BaseModel):
     password: str
     password_confirm: str
 
-class UserLoginSchema(BaseModel):
-    login: str
-    password: str
-
     @field_validator('username')
     def validate_username(cls, username):
         if len(username) < 3:
@@ -118,15 +114,23 @@ class UserLoginSchema(BaseModel):
             raise ValueError('Пароль слишком короткий. Минимальная длина пароля: 8.')
         return password
 
+class UserLoginSchema(BaseModel):
+    login: str
+    password: str
+
+pwd_context = CryptContext(schemes=['bcrypt'], deprecated="auto")
 
 def hashing_password(password: str) -> str:
-    pwd_context = CryptContext(schemes=['bcrypt'], deprecated="auto")
     return pwd_context.hash(password)
+
+def generate_api_key() -> str:
+    return secrets.token_urlsafe(32)
 
 @app.post('/register')
 async def register(user_data: UserRegistrationSchema, session: SessionDep):
     is_user_exist = await session.execute(
-        select(UserModel).where(
+        select(UserModel).
+        where(
             (UserModel.email == user_data.email) |
             (UserModel.username == user_data.username)
         )
@@ -139,7 +143,6 @@ async def register(user_data: UserRegistrationSchema, session: SessionDep):
         )
 
     if user_data.password != user_data.password_confirm:
-        print(user_data.password, user_data.password_confirm)
         raise HTTPException (
             status_code=status.HTTP_400_BAD_REQUEST,
             detail='Пароли не совпадают!'
@@ -150,6 +153,7 @@ async def register(user_data: UserRegistrationSchema, session: SessionDep):
         username = user_data.username,
         phone = user_data.phone,
         password = hashing_password(user_data.password),
+        api_key = generate_api_key(),
         created_at = datetime.now(),
         updated_at = datetime.now()
     )
@@ -158,3 +162,43 @@ async def register(user_data: UserRegistrationSchema, session: SessionDep):
     await session.commit()
 
     return {'message': 'Пользователь успешно зарегистрирован.'}
+
+security_scheme = HTTPBearer(bearerFormat="TOKEN")
+ 
+async def get_current_user(session: SessionDep, credentials: HTTPAuthorizationCredentials = Depends(security_scheme)) -> UserModel:
+    token = credentials.credentials
+    user = await session.scalar(
+        select(UserModel).
+        where(UserModel.api_key == token)
+    )
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Неверный токен авторизации",
+            headers={"WWW-Authenticate": "TOKEN"}
+        )
+    return user
+
+@app.post("/login")
+async def login(session: SessionDep, user_data: UserLoginSchema):
+    user = await session.scalar(
+        select(UserModel).where(
+            (UserModel.email == user_data.login) |
+            (UserModel.username == user_data.login)
+        )
+    )
+
+    if not user or not pwd_context.verify(user_data.password, user.password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Неверные учетные данные"
+        )
+    
+    if not user.api_key:
+        user.api_key = generate_api_key()
+        await session.commit()
+    
+    return {
+        "access_token": user.api_key,
+        "token_type": "token"
+    }
