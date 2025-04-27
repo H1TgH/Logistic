@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from src.users.utils import get_current_user
 from src.users.models import UserModel
-from src.users.schemas import UpdatePhoneNumberSchema
+from src.users.schemas import UpdatePhoneNumberSchema, UpdateNameSchema
 from src.database import SessionDep
 
 
@@ -18,3 +18,16 @@ async def editing_phone(
     await session.commit()
 
     return {'message': 'Номер телефона успешно изменен.'}
+
+users_router = APIRouter()
+
+@users_router.patch('/api/users/me/name')
+async def editing_name(
+    session: SessionDep,
+    request: UpdateNameSchema,
+    current_user: UserModel = Depends(get_current_user),
+):
+    current_user.name = request.name
+    await session.commit()
+
+    return {'message': 'Имя пользователя успешно изменено.'}

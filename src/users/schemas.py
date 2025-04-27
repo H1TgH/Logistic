@@ -36,11 +36,23 @@ class UserLoginSchema(BaseModel):
 
 class UpdatePhoneNumberSchema(BaseModel):
     phone: str
-    
+
     @field_validator('phone')
     def validate_phone_number(cls, phone_number):
         if len(phone_number) < 12:
             raise ValueError('Номер телефона слишком короткий.')
-        if len(phone_number) > 12:
+        if len(phone_number) > 20:
             raise ValueError('Номер телефона слишком длинный.')
         return phone_number    
+    
+class UpdateNameSchema(BaseModel):
+    name: str
+
+    @field_validator('name')
+    def validate_phone_number(cls, name):
+        if len(name) < 2:
+            raise ValueError('Имя слишком короткое.')
+        if len(name) > 32:
+            raise ValueError('Имя слишком Длинное.')
+        return name    
+    
