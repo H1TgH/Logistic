@@ -53,6 +53,16 @@ class UpdateNameSchema(BaseModel):
         if len(name) < 2:
             raise ValueError('Имя слишком короткое.')
         if len(name) > 32:
-            raise ValueError('Имя слишком Длинное.')
+            raise ValueError('Имя слишком длинное.')
         return name    
     
+class UpdateSurnameSchema(BaseModel):
+    surname: str
+
+    @field_validator('surname')
+    def validate_phone_number(cls, surname):
+        if len(surname) < 2:
+            raise ValueError('Фамилия слишком короткая.')
+        if len(surname) > 32:
+            raise ValueError('Фамилия слишком длинная.')
+        return surname  

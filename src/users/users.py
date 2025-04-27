@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from src.users.utils import get_current_user
 from src.users.models import UserModel
-from src.users.schemas import UpdatePhoneNumberSchema, UpdateNameSchema
+from src.users.schemas import UpdatePhoneNumberSchema, UpdateNameSchema, UpdateSurnameSchema
 from src.database import SessionDep
 
 
@@ -31,3 +31,14 @@ async def editing_name(
     await session.commit()
 
     return {'message': 'Имя пользователя успешно изменено.'}
+
+@users_router.patch('/api/users/me/surname')
+async def editing_surname(
+    session: SessionDep,
+    request: UpdateSurnameSchema,
+    current_user: UserModel = Depends(get_current_user),
+):
+    current_user.surname = request.surname
+    await session.commit()
+
+    return {'message': 'Фамилия пользователя успешно изменена.'}
