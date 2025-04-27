@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from src.users.utils import get_current_user
+from src.users.utils import get_current_user, hashing_password, pwd_context
 from src.users.models import UserModel
-from src.users.schemas import UpdatePhoneNumberSchema, UpdateNameSchema, UpdateSurnameSchema
+from src.users.schemas import UpdatePhoneNumberSchema, UpdateNameSchema, UpdateSurnameSchema, UpdatePasswordSchema
 from src.database import SessionDep
 
 
@@ -42,3 +42,27 @@ async def editing_surname(
     await session.commit()
 
     return {'message': 'Фамилия пользователя успешно изменена.'}
+
+@users_router.patch('/api/users/me/password')
+async def editing_password(
+    session: SessionDep,
+    request: UpdatePasswordSchema,
+    current_user: UserModel = Depends(get_current_user)
+):
+    if not pwd_context.verify(request.old_password, current_user.password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='Введен неверный текущий пароль.'
+        )
+
+    if pwd_context.verify(request.new_password, current_user.password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='Пароли должны отличаться.'
+        )
+    
+    new_password = hashing_password(request.new_password)
+    current_user.password = new_password
+    await session.commit()
+
+    return {'message': 'Пароль успешно изменен.'}

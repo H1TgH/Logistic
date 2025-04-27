@@ -65,4 +65,14 @@ class UpdateSurnameSchema(BaseModel):
             raise ValueError('Фамилия слишком короткая.')
         if len(surname) > 32:
             raise ValueError('Фамилия слишком длинная.')
-        return surname  
+        return surname
+
+class UpdatePasswordSchema(BaseModel):
+    old_password: str
+    new_password: str
+
+    @field_validator('new_password')
+    def validate_phone_number(cls, new_password):
+        if len(new_password) < 8:
+            raise ValueError('Пароль слишком короткий.')
+        return new_password
