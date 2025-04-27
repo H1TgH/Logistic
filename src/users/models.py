@@ -34,6 +34,14 @@ class UserModel(Base):
         unique=True,
         nullable=False
     )
+    name: Mapped[str] = mapped_column(
+        String(32),
+        nullable=True
+    ) 
+    surname: Mapped[str] = mapped_column(
+        String(32),
+        nullable=True
+    )
     password: Mapped[str] = mapped_column(
         String(128), 
         nullable=False
