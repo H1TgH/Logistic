@@ -5,13 +5,14 @@ from sqlalchemy import select
 from fastapi import HTTPException, status, APIRouter
 
 from src.users.schemas import UserRegistrationSchema
-from src.users.dependencies import SessionDep
+from src.database import SessionDep
 from src.users.models import UserModel
 from src.users.utils import hashing_password, generate_api_key
 
+
 register_router = APIRouter()
 
-@register_router.post('/register')
+@register_router.post('/api/register')
 async def register(user_data: UserRegistrationSchema, session: SessionDep):
     is_user_exist = await session.execute(
         select(UserModel).

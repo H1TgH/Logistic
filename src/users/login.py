@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, status
 
 from sqlalchemy import select
 
-from src.users.dependencies import SessionDep
+from src.database import SessionDep
 from src.users.schemas import UserLoginSchema
 from src.users.utils import pwd_context, generate_api_key
 from src.users.models import UserModel
@@ -10,7 +10,7 @@ from src.users.models import UserModel
 
 login_router = APIRouter()
 
-@login_router.post("/login")
+@login_router.post("/api/login")
 async def login(session: SessionDep, user_data: UserLoginSchema):
     user = await session.scalar(
         select(UserModel).where(

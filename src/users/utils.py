@@ -7,7 +7,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from src.users.models import UserModel
-from src.users.dependencies import SessionDep
+from src.database import SessionDep
 
 
 pwd_context = CryptContext(schemes=['bcrypt'], deprecated="auto")
@@ -22,8 +22,8 @@ def generate_api_key() -> str:
 async def get_current_user(session: SessionDep, credentials: HTTPAuthorizationCredentials = Depends(security_scheme)) -> UserModel:
     token = credentials.credentials
     user = await session.scalar(
-        select(UserModel).
-        where(UserModel.api_key == token)
+        select(UserModel)
+        .where(UserModel.api_key == token)
     )
     if not user:
         raise HTTPException(
