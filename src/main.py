@@ -1,7 +1,7 @@
 from fastapi import FastAPI, APIRouter
 
 from src.users.router import main_router
-from src.reviews.review import review_router
+from reviews.router import review_router
 
 
 app = FastAPI()
