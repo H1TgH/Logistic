@@ -1,9 +1,13 @@
 from datetime import date
+from typing import List
+from collections import defaultdict
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
+from sqlalchemy import select
+from sqlalchemy.orm import joinedload
 
 from src.database import SessionDep
-from src.reviews.schemas import ReviewCreateSchema
+from src.reviews.schemas import ReviewCreateSchema, ReviewResponseSchema, ReviewWithRepliesSchema
 from src.users.models import UserModel
 from src.reviews.models import ReviewModel
 from src.users.utils import get_current_user
@@ -11,19 +15,21 @@ from src.users.utils import get_current_user
 
 review_router = APIRouter()
 
-@review_router.post('/api/review')
+@review_router.post('/api/reviews')
 async def create_review(
     sesion: SessionDep,
     user_review: ReviewCreateSchema,
     current_user: UserModel = Depends(get_current_user)
 ):
-    if not (user_review.rate in range(1, 6)):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail='Рейтинг должен быть от 1 до 5'
-        )
+    is_reply = user_review.parent_id is not None
 
-    if user_review.parent_id:
+    if not is_reply:
+        if user_review.rate is None or not (1 <= user_review.rate <= 5):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail='Рейтинг обязателен и должен быть от 1 до 5 для основного отзыва'
+            )
+    else:
         parent_review = await sesion.get(ReviewModel, user_review.parent_id)
         if not parent_review:
             raise HTTPException(status_code=404, detail="Родительский отзыв не найден")
@@ -33,11 +39,43 @@ async def create_review(
     new_review = ReviewModel(
         user_id=current_user.id,
         review=user_review.review,
-        rate=user_review.rate,
+        rate=user_review.rate if user_review.rate else 0,
         created_at=date.today(),
         parent_id=user_review.parent_id
     )
 
     sesion.add(new_review)
     await sesion.commit()
-    return {'message': 'Отзыв успешно оставлен.'}
+    return {'message': 'Отзыв или ответ успешно оставлен.'}
+
+@review_router.get('/api/reviews', response_model=List[ReviewWithRepliesSchema])
+async def get_reviews(
+    sesion: SessionDep,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(10, le=100)
+):
+    query_main = select(ReviewModel).where(ReviewModel.parent_id == None).offset(skip).limit(limit)
+    result_main = await sesion.execute(query_main)
+    main_reviews = result_main.scalars().all()
+
+    main_ids = [review.id for review in main_reviews]
+    if not main_ids:
+        return []
+
+    query_replies = select(ReviewModel).where(ReviewModel.parent_id.in_(main_ids))
+    result_replies = await sesion.execute(query_replies)
+    all_replies = result_replies.scalars().all()
+
+    reply_map = defaultdict(list)
+    for reply in all_replies:
+        if len(reply_map[reply.parent_id]) < 3:
+            reply_map[reply.parent_id].append(reply)
+
+    response = []
+    for main in main_reviews:
+        response.append(ReviewWithRepliesSchema(
+            **main.__dict__,
+            replies=[ReviewResponseSchema(**r.__dict__) for r in reply_map.get(main.id, [])]
+        ))
+
+    return response

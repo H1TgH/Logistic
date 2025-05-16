@@ -1,16 +1,21 @@
-from pydantic import BaseModel
-from typing import Optional
+from pydantic import BaseModel, Field
+from typing import Optional, List
 from datetime import date
+
 
 class ReviewCreateSchema(BaseModel):
     review: str
-    rate: int
+    rate: Optional[int] = Field(None, ge=1, le=5)
     parent_id: Optional[int] = None
 
 class ReviewResponseSchema(BaseModel):
     id: int
     user_id: int
     review: Optional[str]
-    rate: int
+    rate: Optional[int]
     created_at: date
     parent_id: Optional[int]
+
+
+class ReviewWithRepliesSchema(ReviewResponseSchema):
+    replies: List[ReviewResponseSchema] = []
