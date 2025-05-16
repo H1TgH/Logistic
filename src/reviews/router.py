@@ -2,8 +2,6 @@ from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from sqlalchemy import select
-
 from src.database import SessionDep
 from src.reviews.schemas import ReviewCreateSchema
 from src.users.models import UserModel
@@ -24,15 +22,22 @@ async def create_review(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail='Рейтинг должен быть от 1 до 5'
         )
-    
+
+    if user_review.parent_id:
+        parent_review = await sesion.get(ReviewModel, user_review.parent_id)
+        if not parent_review:
+            raise HTTPException(status_code=404, detail="Родительский отзыв не найден")
+        if parent_review.parent_id is not None:
+            raise HTTPException(status_code=400, detail="Нельзя ответить на ответ")
+
     new_review = ReviewModel(
-        user_id = current_user.id,
+        user_id=current_user.id,
         review=user_review.review,
-        rate = user_review.rate,
-        created_at = date.today()
+        rate=user_review.rate,
+        created_at=date.today(),
+        parent_id=user_review.parent_id
     )
 
     sesion.add(new_review)
     await sesion.commit()
-
-    return {'messege': 'Отзыв успешно оставлен.'}
+    return {'message': 'Отзыв успешно оставлен.'}
