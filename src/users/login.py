@@ -31,5 +31,6 @@ async def login(session: SessionDep, user_data: UserLoginSchema):
     
     return {
         "access_token": user.api_key,
-        "token_type": "token"
+        "token_type": "token",
+        "username": user.username
     }
