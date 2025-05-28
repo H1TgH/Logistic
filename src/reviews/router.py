@@ -15,7 +15,7 @@ from src.users.utils import get_current_user
 
 review_router = APIRouter()
 
-@review_router.post('/api/reviews', tags=['reviews'])
+@review_router.post('/api/v1/reviews', tags=['reviews'])
 async def create_review(
     sesion: SessionDep,
     user_review: ReviewCreateSchema,
@@ -48,7 +48,7 @@ async def create_review(
     await sesion.commit()
     return {'message': 'Отзыв или ответ успешно оставлен.'}
 
-@review_router.get('/api/reviews', response_model=List[ReviewWithRepliesSchema], tags=['reviews'])
+@review_router.get('/api/public/reviews', response_model=List[ReviewWithRepliesSchema], tags=['reviews'])
 async def get_reviews(
     sesion: SessionDep,
     skip: int = Query(0, ge=0),

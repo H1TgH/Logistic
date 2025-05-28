@@ -8,7 +8,7 @@ from src.database import SessionDep
 
 users_router = APIRouter()
 
-@users_router.patch('/api/users/me/phone', tags=['users_edit'])
+@users_router.patch('/api/v1/users/me/phone', tags=['users_edit'])
 async def editing_phone(
     session: SessionDep,
     request: UpdatePhoneNumberSchema,
@@ -21,7 +21,7 @@ async def editing_phone(
 
 users_router = APIRouter()
 
-@users_router.patch('/api/users/me/name', tags=['users_edit'])
+@users_router.patch('/api/v1/users/me/name', tags=['users_edit'])
 async def editing_name(
     session: SessionDep,
     request: UpdateNameSchema,
@@ -32,7 +32,7 @@ async def editing_name(
 
     return {'message': 'Имя пользователя успешно изменено.'}
 
-@users_router.patch('/api/users/me/surname', tags=['users_edit'])
+@users_router.patch('/api/v1/users/me/surname', tags=['users_edit'])
 async def editing_surname(
     session: SessionDep,
     request: UpdateSurnameSchema,
@@ -43,7 +43,7 @@ async def editing_surname(
 
     return {'message': 'Фамилия пользователя успешно изменена.'}
 
-@users_router.patch('/api/users/me/password', tags=['users_edit'])
+@users_router.patch('/api/v1/users/me/password', tags=['users_edit'])
 async def editing_password(
     session: SessionDep,
     request: UpdatePasswordSchema,

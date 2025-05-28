@@ -10,7 +10,7 @@ from src.users.models import UserModel
 
 login_router = APIRouter()
 
-@login_router.post("/api/login", tags=['auth'])
+@login_router.post("/api/v1/public/login", tags=['auth'])
 async def login(session: SessionDep, user_data: UserLoginSchema):
     user = await session.scalar(
         select(UserModel).where(
