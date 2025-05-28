@@ -33,7 +33,8 @@ class ReviewModel(Base):
     )
 
     parent_id: Mapped[Optional[int]] = mapped_column(
-        ForeignKey('reviews.id'), nullable=True
+        ForeignKey('reviews.id'), 
+        nullable=True
     )
 
     created_at: Mapped[date] = mapped_column(
