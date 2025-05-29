@@ -32,9 +32,9 @@ async def create_review(
     else:
         parent_review = await sesion.get(ReviewModel, user_review.parent_id)
         if not parent_review:
-            raise HTTPException(status_code=404, detail="Родительский отзыв не найден")
+            raise HTTPException(status_code=404, detail='Родительский отзыв не найден')
         if parent_review.parent_id is not None:
-            raise HTTPException(status_code=400, detail="Нельзя ответить на ответ")
+            raise HTTPException(status_code=400, detail='Нельзя ответить на ответ')
 
     new_review = ReviewModel(
         user_id=current_user.id,

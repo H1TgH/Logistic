@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy import Integer, String, Text, DateTime, func
+from sqlalchemy import Integer, String, Text, TIMESTAMP, DateTime, func
 
 from src.database import Base
 
@@ -35,8 +35,8 @@ class DeliveryAPICredentials(Base):
         nullable=True
     )
 
-    expires_at: Mapped[DateTime] = mapped_column(
-        DateTime,
+    expires_at = mapped_column(
+        TIMESTAMP(timezone=True),
         nullable=True
     )
 

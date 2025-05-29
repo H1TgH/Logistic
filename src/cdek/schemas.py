@@ -13,3 +13,9 @@ class CDEKCalculateResponse(BaseModel):
     period_max: int
     total_sum: float
     currency: str
+
+class DeliveryPackage(BaseModel):
+    weight: int
+    length: int
+    width: int
+    height: int

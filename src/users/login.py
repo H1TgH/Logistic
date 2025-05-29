@@ -10,7 +10,7 @@ from src.users.models import UserModel
 
 login_router = APIRouter()
 
-@login_router.post("/api/v1/public/login", tags=['auth'])
+@login_router.post('/api/v1/public/login', tags=['auth'])
 async def login(session: SessionDep, user_data: UserLoginSchema):
     user = await session.scalar(
         select(UserModel).where(
@@ -22,7 +22,7 @@ async def login(session: SessionDep, user_data: UserLoginSchema):
     if not user or not pwd_context.verify(user_data.password, user.password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Неверные учетные данные"
+            detail='Неверные учетные данные'
         )
     
     if not user.api_key:
@@ -30,7 +30,7 @@ async def login(session: SessionDep, user_data: UserLoginSchema):
         await session.commit()
     
     return {
-        "access_token": user.api_key,
-        "token_type": "token",
-        "username": user.username
+        'access_token': user.api_key,
+        'token_type': 'token',
+        'username': user.username
     }

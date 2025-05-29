@@ -10,8 +10,8 @@ from src.users.models import UserModel
 from src.database import SessionDep
 
 
-pwd_context = CryptContext(schemes=['bcrypt'], deprecated="auto")
-security_scheme = HTTPBearer(bearerFormat="TOKEN")
+pwd_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
+security_scheme = HTTPBearer(bearerFormat='TOKEN')
 
 def hashing_password(password: str) -> str:
     return pwd_context.hash(password)
@@ -29,8 +29,8 @@ async def get_current_user(session: SessionDep, credentials: HTTPAuthorizationCr
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Неверный токен авторизации",
-            headers={"WWW-Authenticate": "TOKEN"}
+            detail='Неверный токен авторизации',
+            headers={'WWW-Authenticate': 'TOKEN'}
         )
     
     return user

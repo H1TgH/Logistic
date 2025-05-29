@@ -6,6 +6,7 @@ from sqlalchemy.future import select
 
 from src.database import SessionDep
 from src.models import DeliveryAPICredentials
+from src.cdek.schemas import DeliveryPackage
 
 
 CDEK_AUTH_URL = 'https://api.edu.cdek.ru/v2/oauth/token'
@@ -24,8 +25,14 @@ async def get_cdek_token(session: SessionDep) -> str:
     if creds and creds.token and creds.expires_at and creds.expires_at > now:
         return creds.token
 
-    if not creds or not creds.client_login or not creds.client_secret:
-        raise Exception('CDEK credentials not configured in database.')
+    if not creds:
+        creds = DeliveryAPICredentials(
+            service_name=SERVICE_NAME,
+            client_login='',
+            client_secret='',
+        )
+        session.add(creds)
+        await session.commit()
 
     async with httpx.AsyncClient() as client:
         response = await client.post(
@@ -68,10 +75,7 @@ async def calculate_cdek_delivery(
     session: SessionDep,
     from_location_code: int,
     to_location_code: int,
-    weight_grams: int,
-    length_cm: int,
-    width_cm: int,
-    height_cm: int,
+    packages: list[DeliveryPackage],
     tariff_code: Optional[int] = None,
     date: Optional[datetime] = None,
     currency: Optional[int] = None,
@@ -83,14 +87,7 @@ async def calculate_cdek_delivery(
     payload = {
         'from_location': {'code': from_location_code},
         'to_location': {'code': to_location_code},
-        'packages': [
-            {
-                'weight': weight_grams,
-                'length': length_cm,
-                'width': width_cm,
-                'height': height_cm,
-            }
-        ]
+        'packages': [p.dict() for p in packages]
     }
 
     if tariff_code is not None:
