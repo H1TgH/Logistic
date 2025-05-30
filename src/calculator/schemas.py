@@ -1,6 +1,7 @@
 from typing import List, Literal, Optional
-from pydantic import BaseModel
+from datetime import datetime
 
+from pydantic import BaseModel
 
 class DeliveryLocation(BaseModel):
     code: int
@@ -16,7 +17,13 @@ class DeliveryRequest(BaseModel):
     from_location: DeliveryLocation
     to_location: DeliveryLocation
     packages: List[DeliveryPackage]
-    tariff_code: Optional[int] = 137
+    date: Optional[datetime] = None
+    delivery_type: Optional[int] = 1
     currency: Optional[int] = 1
     lang: Optional[str] = 'rus'
-    delivery_type: Optional[int] = 0
+
+class DeliveryResponse(BaseModel):
+    delivery_sum: float
+    period_min: int
+    period_max: int
+    service_name: str = 'СДЭК'

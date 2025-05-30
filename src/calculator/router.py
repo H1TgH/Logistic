@@ -1,13 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
-
 from src.database import SessionDep
-from src.calculator.schemas import DeliveryRequest
+from src.calculator.schemas import DeliveryRequest, DeliveryResponse
 from src.cdek.utils import calculate_cdek_delivery
-
 
 calculator_router = APIRouter(tags=['calculator'])
 
-@calculator_router.post('/api/v1/public/calculate')
+@calculator_router.post('/api/v1/public/calculate', response_model=DeliveryResponse)
 async def calculate_delivery(
     request: DeliveryRequest,
     session: SessionDep,
@@ -19,13 +17,11 @@ async def calculate_delivery(
                 from_location_code=request.from_location.code,
                 to_location_code=request.to_location.code,
                 packages=request.packages,
-                tariff_code=request.tariff_code,
+                date=request.date,
                 currency=request.currency,
                 lang=request.lang,
                 delivery_type=request.delivery_type,
             )
-
-            
             return result
         except Exception as e:
             raise HTTPException(status_code=502, detail=f'CDEK API error: {str(e)}')

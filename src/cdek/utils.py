@@ -9,6 +9,12 @@ from src.models import DeliveryAPICredentials
 from src.cdek.schemas import DeliveryPackage
 
 
+DELIVERY_TYPE_TO_TARIFF = {
+    1: 136,  # Склад-Склад
+    2: 137,  # Склад-Дверь
+    3: 138,  # Дверь-Склад
+    4: 139,  # Дверь-Дверь
+}
 CDEK_AUTH_URL = 'https://api.edu.cdek.ru/v2/oauth/token'
 CDEK_CALC_URL = 'https://api.edu.cdek.ru/v2/calculator/tariff'
 SERVICE_NAME = 'cdek'
@@ -69,8 +75,6 @@ async def get_cdek_token(session: SessionDep) -> str:
     await session.commit()
     return token
 
-from datetime import datetime, timezone
-
 async def calculate_cdek_delivery(
     session: SessionDep,
     from_location_code: int,
@@ -84,22 +88,25 @@ async def calculate_cdek_delivery(
 ) -> dict:
     access_token = await get_cdek_token(session)
 
+    print(tariff_code)
+    if tariff_code is None:
+        tariff_code = DELIVERY_TYPE_TO_TARIFF.get(delivery_type, 136)
+
     payload = {
+        'tariff_code': tariff_code,
         'from_location': {'code': from_location_code},
         'to_location': {'code': to_location_code},
         'packages': [p.dict() for p in packages]
     }
 
-    if tariff_code is not None:
-        payload['tariff_code'] = tariff_code
     if date is not None:
-        payload['date'] = date.isoformat()
+        payload['date'] = date.strftime('%Y-%m-%dT%H:%M:%S%z')
     if currency is not None:
         payload['currency'] = currency
     if lang is not None:
         payload['lang'] = lang
-    if delivery_type is not None:
-        payload['type'] = delivery_type
+
+    print("Request payload:", payload)
 
     headers = {
         'Authorization': f'Bearer {access_token}',
