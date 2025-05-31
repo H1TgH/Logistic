@@ -4,7 +4,7 @@ from datetime import datetime
 from pydantic import BaseModel
 
 class DeliveryLocation(BaseModel):
-    code: int
+    city_name: str
 
 class DeliveryPackage(BaseModel):
     weight: int

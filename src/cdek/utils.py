@@ -88,7 +88,6 @@ async def calculate_cdek_delivery(
 ) -> dict:
     access_token = await get_cdek_token(session)
 
-    print(tariff_code)
     if tariff_code is None:
         tariff_code = DELIVERY_TYPE_TO_TARIFF.get(delivery_type, 136)
 
@@ -106,8 +105,6 @@ async def calculate_cdek_delivery(
     if lang is not None:
         payload['lang'] = lang
 
-    print("Request payload:", payload)
-
     headers = {
         'Authorization': f'Bearer {access_token}',
         'Content-Type': 'application/json'
@@ -118,3 +115,22 @@ async def calculate_cdek_delivery(
         response.raise_for_status()
 
     return response.json()
+
+async def get_city_code_by_name(session: SessionDep, city_name: str) -> Optional[int]:
+    access_token = await get_cdek_token(session)
+
+    async with httpx.AsyncClient() as client:
+        response = await client.get(
+            "https://api.edu.cdek.ru/v2/location/cities",
+            headers={'Authorization': f'Bearer {access_token}'},
+            params={'country_codes': 'RU', 'city': city_name}
+        )
+        if response.status_code != 200:
+            print(f"Failed to fetch city code for '{city_name}': {response.text}")
+            return None
+
+        data = response.json()
+        if isinstance(data, list) and data:
+            return data[0]['code']
+
+    return None
