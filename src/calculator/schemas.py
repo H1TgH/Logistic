@@ -13,7 +13,7 @@ class DeliveryPackage(BaseModel):
     height: int    
 
 class DeliveryRequest(BaseModel):
-    service: Literal['cdek']
+    service: Literal['cdek', 'pecom']
     from_location: DeliveryLocation
     to_location: DeliveryLocation
     packages: List[DeliveryPackage]
