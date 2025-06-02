@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, date, time
 from typing import Optional
 
 import httpx
@@ -99,7 +99,7 @@ async def calculate_cdek_delivery(
     }
 
     if date is not None:
-        payload['date'] = date.strftime('%Y-%m-%dT%H:%M:%S%z')
+        payload['date'] = date
     if currency is not None:
         payload['currency'] = currency
     if lang is not None:
@@ -134,3 +134,15 @@ async def get_city_code_by_name(session: SessionDep, city_name: str) -> Optional
             return data[0]['code']
 
     return None
+
+def normalize_delivery_date(user_date: datetime) -> str:
+    user_date_only = user_date.date()
+    today = date.today()
+
+    if user_date_only <= today:
+        corrected_date = today + timedelta(days=1)
+    else:
+        corrected_date = user_date_only
+
+    full_datetime = datetime.combine(corrected_date, time(0, 0), timezone(timedelta(hours=3)))
+    return full_datetime.isoformat()

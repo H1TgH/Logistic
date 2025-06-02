@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from src.database import SessionDep
 from src.calculator.schemas import DeliveryRequest, DeliveryResponse
-from src.cdek.utils import calculate_cdek_delivery, get_city_code_by_name
+from src.cdek.utils import calculate_cdek_delivery, get_city_code_by_name, normalize_delivery_date
 from src.pecom.utils import calculate_pecom_delivery
 
 calculator_router = APIRouter(tags=['calculator'])
@@ -19,12 +19,13 @@ async def calculate_delivery(
             raise HTTPException(status_code=400, detail='Не удалось определить код города')
 
         if request.service == 'cdek':
+            date = normalize_delivery_date(request.date)
             result = await calculate_cdek_delivery(
                 session=session,
                 from_location_code=from_code,
                 to_location_code=to_code,
                 packages=request.packages,
-                date=request.date,
+                date=date,
                 currency=request.currency,
                 lang=request.lang,
                 delivery_type=request.delivery_type,
