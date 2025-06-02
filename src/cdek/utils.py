@@ -145,4 +145,7 @@ def normalize_delivery_date(user_date: datetime) -> str:
         corrected_date = user_date_only
 
     full_datetime = datetime.combine(corrected_date, time(0, 0), timezone(timedelta(hours=3)))
-    return full_datetime.isoformat()
+    iso_string = full_datetime.isoformat()
+    if iso_string.endswith('+03:00') or iso_string.endswith('+00:00'):
+        iso_string = iso_string[:-3] + iso_string[-2:]
+    return iso_string
