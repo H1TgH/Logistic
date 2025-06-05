@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from src.database import SessionDep
 from src.calculator.schemas import DeliveryRequest, DeliveryResponse, DeliveryResult
-from src.cdek.utils import calculate_cdek_delivery, get_city_code_by_name, normalize_delivery_date
+from src.cdek.utils import calculate_cdek_delivery, get_cdek_city_code, normalize_delivery_date
 from src.pecom.utils import calculate_pecom_delivery
 
 
@@ -15,14 +15,15 @@ async def calculate_delivery(
     try:
         shipment_date = normalize_delivery_date(request.date)
 
-        from_code = await get_city_code_by_name(session, request.from_location.city_name)
-        to_code = await get_city_code_by_name(session, request.to_location.city_name)
+        from_code = await get_cdek_city_code(session, request.from_location.city_name)
+        to_code = await get_cdek_city_code(session, request.to_location.city_name)
 
         if from_code is None or to_code is None:
             raise HTTPException(status_code=400, detail='Не удалось определить код города')
 
         results = []
 
+        # CDEK
         try:
             cdek_result = await calculate_cdek_delivery(
                 session=session,
@@ -45,20 +46,23 @@ async def calculate_delivery(
         except Exception as e:
             print(f"CDEK API error: {str(e)}")
 
+        # Pecom (возвращает список результатов)
         try:
-            pecom_result = await calculate_pecom_delivery(
-                from_city_id=request.from_location.city_name,
-                to_city_id=request.to_location.city_name,
+            pecom_results = await calculate_pecom_delivery(
+                from_city_name=request.from_location.city_name,
+                to_city_name=request.to_location.city_name,
                 packages=request.packages,
+                delivery_type=request.delivery_type,
             )
-            results.append(
-                DeliveryResult(
-                    delivery_sum=pecom_result['delivery_sum'],
-                    period_min=pecom_result['period_min'],
-                    period_max=pecom_result['period_max'],
-                    service_name='ПЭК',
+            for pecom_result in pecom_results:
+                results.append(
+                    DeliveryResult(
+                        delivery_sum=pecom_result['delivery_sum'],
+                        period_min=pecom_result['period_min'],
+                        period_max=pecom_result['period_max'],
+                        service_name=pecom_result['service_name'],
+                    )
                 )
-            )
         except Exception as e:
             print(f"Pecom API error: {str(e)}")
 

@@ -116,7 +116,7 @@ async def calculate_cdek_delivery(
 
     return response.json()
 
-async def get_city_code_by_name(session: SessionDep, city_name: str) -> Optional[int]:
+async def get_cdek_city_code(session: SessionDep, city_name: str) -> Optional[int]:
     access_token = await get_cdek_token(session)
 
     async with httpx.AsyncClient() as client:
