@@ -23,9 +23,11 @@ class DeliveryRequest(BaseModel):
 
 class DeliveryResult(BaseModel):
     service_name: str
-    delivery_sum: float
+    delivery_sum: int
     period_min: int
     period_max: int
+    service_url: str
+    service_logo: str
 
 class DeliveryResponse(BaseModel):
     from_location: DeliveryLocation  

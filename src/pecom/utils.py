@@ -5,6 +5,9 @@ from src.calculator.schemas import DeliveryPackage
 PECOM_CALC_URL = "http://calc.pecom.ru/bitrix/components/pecom/calc/ajax.php"
 PECOM_CITIES_URL = "https://pecom.ru/ru/calc/towns.php"
 DADATA_CLEAN_URL = "https://cleaner.dadata.ru/api/v1/clean/address"
+PECOM_BASE_URL = 'https://pecom.ru'
+PECOM_LOGO = 'https://pecom.ru/upload/medialibrary/3ba/logo.png'
+
 
 async def clean_address_with_dadata(full_address: str) -> str:
     """Извлекает название города из полного адреса с помощью DaData API."""
@@ -114,20 +117,20 @@ async def calculate_pecom_delivery(
     # Базовая стоимость в зависимости от delivery_type
     base_price = 0.0
     if delivery_type == 2 and "deliver" in data and len(data["deliver"]) >= 3:
-        base_price += float(data["deliver"][2])  # Склад - Дверь
+        base_price += int(data["deliver"][2])  # Склад - Дверь
     if delivery_type == 3 and "take" in data and len(data["take"]) >= 3:
-        base_price += float(data["take"][2])  # Дверь - Склад
+        base_price += int(data["take"][2])  # Дверь - Склад
     if delivery_type == 4:
         if "deliver" in data and len(data["deliver"]) >= 3:
-            base_price += float(data["deliver"][2])
+            base_price += int(data["deliver"][2])
         if "take" in data and len(data["take"]) >= 3:
-            base_price += float(data["take"][2])  # Дверь - Дверь
+            base_price += int(data["take"][2])  # Дверь - Дверь
 
     # Дополнительные услуги (страхование и т.д.)
-    additional_cost = 0.0
+    additional_cost = 0
     for add_key in ["ADD_1", "ADD_2", "ADD_3", "ADD_4"]:
         if add_key in data and "3" in data[add_key]:
-            additional_cost += float(data[add_key]["3"])
+            additional_cost += int(data[add_key]["3"])
 
     # Извлекаем сроки доставки из aperiods
     period_min, period_max = extract_periods(data.get("aperiods", ""), delivery_type)
@@ -135,21 +138,25 @@ async def calculate_pecom_delivery(
     # Формируем результаты для auto и avia
     results = []
     if "auto" in data and len(data["auto"]) >= 3:
-        auto_price = base_price + float(data["auto"][2]) + additional_cost
+        auto_price = base_price + int(data["auto"][2]) + additional_cost
         results.append({
             "service_name": "ПЭК (автоперевозка)",
             "delivery_sum": auto_price,
             "period_min": period_min,
             "period_max": period_max,
+            'service_url': PECOM_BASE_URL,
+            'service_logo': PECOM_LOGO
         })
 
     if "avia" in data and len(data["avia"]) >= 3:
-        avia_price = base_price + float(data["avia"][2]) + additional_cost
+        avia_price = base_price + int(data["avia"][2]) + additional_cost
         results.append({
             "service_name": "ПЭК (авиаперевозка)",
             "delivery_sum": avia_price,
             "period_min": period_min,
             "period_max": period_max,
+            'service_url': PECOM_BASE_URL,
+            'service_logo': PECOM_LOGO
         })
 
     if not results:

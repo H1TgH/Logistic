@@ -37,10 +37,12 @@ async def calculate_delivery(
             )
             results.append(
                 DeliveryResult(
+                    service_name='СДЭК',
                     delivery_sum=cdek_result['delivery_sum'],
                     period_min=cdek_result['period_min'],
                     period_max=cdek_result['period_max'],
-                    service_name='СДЭК',
+                    service_url=cdek_result['service_url'],
+                    service_logo=cdek_result['service_logo']
                 )
             )
         except Exception as e:
@@ -57,10 +59,12 @@ async def calculate_delivery(
             for pecom_result in pecom_results:
                 results.append(
                     DeliveryResult(
+                        service_name=pecom_result['service_name'],
                         delivery_sum=pecom_result['delivery_sum'],
                         period_min=pecom_result['period_min'],
                         period_max=pecom_result['period_max'],
-                        service_name=pecom_result['service_name'],
+                        service_url=pecom_result['service_url'],
+                        service_logo=pecom_result['service_logo']
                     )
                 )
         except Exception as e:

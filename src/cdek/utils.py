@@ -18,6 +18,8 @@ DELIVERY_TYPE_TO_TARIFF = {
 CDEK_AUTH_URL = 'https://api.edu.cdek.ru/v2/oauth/token'
 CDEK_CALC_URL = 'https://api.edu.cdek.ru/v2/calculator/tariff'
 SERVICE_NAME = 'cdek'
+CDEK_BASE_URL = 'https://www.cdek.ru/ru'
+CDEK_LOGO = 'https://upload.wikimedia.org/wikipedia/commons/f/f8/CDEK_logo.svg'
 
 
 async def get_cdek_token(session: SessionDep) -> str:
@@ -114,7 +116,11 @@ async def calculate_cdek_delivery(
         response = await client.post(CDEK_CALC_URL, json=payload, headers=headers)
         response.raise_for_status()
 
-    return response.json()
+    data = response.json()
+    data['service_url'] = CDEK_BASE_URL
+    data['service_logo'] = CDEK_LOGO
+
+    return data
 
 async def get_cdek_city_code(session: SessionDep, city_name: str) -> Optional[int]:
     access_token = await get_cdek_token(session)
