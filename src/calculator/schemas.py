@@ -2,6 +2,7 @@ from typing import List, Literal, Optional
 from datetime import datetime
 from pydantic import BaseModel
 
+
 class DeliveryLocation(BaseModel):
     city_name: str
 
@@ -12,7 +13,7 @@ class DeliveryPackage(BaseModel):
     height: int    
 
 class DeliveryRequest(BaseModel):
-    service: Literal['cdek', 'pecom']  # Оставляем для совместимости, но будем игнорировать
+    service: Literal['cdek', 'pecom']
     from_location: DeliveryLocation
     to_location: DeliveryLocation
     packages: List[DeliveryPackage]
@@ -35,4 +36,4 @@ class DeliveryResponse(BaseModel):
     packages: List[DeliveryPackage]
     delivery_type: Optional[int] = 1
     shipment_date: Optional[datetime] = None  
-    results: List[DeliveryResult]  # Список результатов от всех сервисов
+    results: List[DeliveryResult]

@@ -1,8 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
+
 from src.database import SessionDep
 from src.calculator.schemas import DeliveryRequest, DeliveryResponse, DeliveryResult
-from src.cdek.utils import calculate_cdek_delivery, get_cdek_city_code, normalize_delivery_date
+from src.cdek.utils import calculate_cdek_delivery, get_cdek_city_code, normalize_delivery_date_cdek
 from src.pecom.utils import calculate_pecom_delivery
+from src.dellin.utils import get_dellin_city_code, calculate_dellin_delivery
 
 
 calculator_router = APIRouter(tags=['calculator'])
@@ -13,7 +15,7 @@ async def calculate_delivery(
     session: SessionDep,
 ):
     try:
-        shipment_date = normalize_delivery_date(request.date)
+        shipment_date = normalize_delivery_date_cdek(request.date)
 
         from_code = await get_cdek_city_code(session, request.from_location.city_name)
         to_code = await get_cdek_city_code(session, request.to_location.city_name)
@@ -49,26 +51,50 @@ async def calculate_delivery(
             print(f"CDEK API error: {str(e)}")
 
         # Pecom (возвращает список результатов)
+        # try:
+        #     pecom_results = await calculate_pecom_delivery(
+        #         from_city_name=request.from_location.city_name,
+        #         to_city_name=request.to_location.city_name,
+        #         packages=request.packages,
+        #         delivery_type=request.delivery_type,
+        #     )
+        #     for pecom_result in pecom_results:
+        #         results.append(
+        #             DeliveryResult(
+        #                 service_name=pecom_result['service_name'],
+        #                 delivery_sum=pecom_result['delivery_sum'],
+        #                 period_min=pecom_result['period_min'],
+        #                 period_max=pecom_result['period_max'],
+        #                 service_url=pecom_result['service_url'],
+        #                 service_logo=pecom_result['service_logo']
+        #             )
+        #         )
+        # except Exception as e:
+        #     print(f"Pecom API error: {str(e)}")
+
+        # Dellin
         try:
-            pecom_results = await calculate_pecom_delivery(
-                from_city_name=request.from_location.city_name,
-                to_city_name=request.to_location.city_name,
+            dellin_results = await calculate_dellin_delivery(
+                session=session,
+                from_location=request.from_location.city_name,
+                to_location=request.to_location.city_name,
                 packages=request.packages,
                 delivery_type=request.delivery_type,
+                date=shipment_date,
             )
-            for pecom_result in pecom_results:
+            for dellin_result in dellin_results:
                 results.append(
                     DeliveryResult(
-                        service_name=pecom_result['service_name'],
-                        delivery_sum=pecom_result['delivery_sum'],
-                        period_min=pecom_result['period_min'],
-                        period_max=pecom_result['period_max'],
-                        service_url=pecom_result['service_url'],
-                        service_logo=pecom_result['service_logo']
+                        delivery_sum=dellin_result['delivery_sum'],
+                        period_min=dellin_result['period_min'],
+                        period_max=dellin_result['period_max'],
+                        service_name=dellin_result['service_name'],
+                        service_url=dellin_result['service_url'],
+                        service_logo=dellin_result['service_logo'],
                     )
                 )
         except Exception as e:
-            print(f"Pecom API error: {str(e)}")
+            print(f"Dellin API error: {str(e)}")
 
         if not results:
             raise HTTPException(status_code=502, detail='Не удалось получить данные ни от одного сервиса')
@@ -84,3 +110,7 @@ async def calculate_delivery(
 
     except Exception as e:
         raise HTTPException(status_code=502, detail=f'API error: {str(e)}')
+    
+@calculator_router.post('/test')
+async def acs(session: SessionDep, city_name: str):
+    return await get_dellin_city_code(session, city_name)

@@ -141,7 +141,7 @@ async def get_cdek_city_code(session: SessionDep, city_name: str) -> Optional[in
 
     return None
 
-def normalize_delivery_date(user_date: datetime) -> str:
+def normalize_delivery_date_cdek(user_date: datetime) -> str:
     user_date_only = user_date.date()
     today = date.today()
 
