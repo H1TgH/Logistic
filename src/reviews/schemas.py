@@ -11,6 +11,7 @@ class ReviewCreateSchema(BaseModel):
 class ReviewResponseSchema(BaseModel):
     id: int
     user_id: int
+    username: str
     review: Optional[str]
     rate: Optional[int]
     created_at: date

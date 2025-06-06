@@ -51,26 +51,26 @@ async def calculate_delivery(
             print(f"CDEK API error: {str(e)}")
 
         # Pecom (возвращает список результатов)
-        # try:
-        #     pecom_results = await calculate_pecom_delivery(
-        #         from_city_name=request.from_location.city_name,
-        #         to_city_name=request.to_location.city_name,
-        #         packages=request.packages,
-        #         delivery_type=request.delivery_type,
-        #     )
-        #     for pecom_result in pecom_results:
-        #         results.append(
-        #             DeliveryResult(
-        #                 service_name=pecom_result['service_name'],
-        #                 delivery_sum=pecom_result['delivery_sum'],
-        #                 period_min=pecom_result['period_min'],
-        #                 period_max=pecom_result['period_max'],
-        #                 service_url=pecom_result['service_url'],
-        #                 service_logo=pecom_result['service_logo']
-        #             )
-        #         )
-        # except Exception as e:
-        #     print(f"Pecom API error: {str(e)}")
+        try:
+            pecom_results = await calculate_pecom_delivery(
+                from_city_name=request.from_location.city_name,
+                to_city_name=request.to_location.city_name,
+                packages=request.packages,
+                delivery_type=request.delivery_type,
+            )
+            for pecom_result in pecom_results:
+                results.append(
+                    DeliveryResult(
+                        service_name=pecom_result['service_name'],
+                        delivery_sum=pecom_result['delivery_sum'],
+                        period_min=pecom_result['period_min'],
+                        period_max=pecom_result['period_max'],
+                        service_url=pecom_result['service_url'],
+                        service_logo=pecom_result['service_logo']
+                    )
+                )
+        except Exception as e:
+            print(f"Pecom API error: {str(e)}")
 
         # Dellin
         try:
@@ -111,6 +111,3 @@ async def calculate_delivery(
     except Exception as e:
         raise HTTPException(status_code=502, detail=f'API error: {str(e)}')
     
-@calculator_router.post('/test')
-async def acs(session: SessionDep, city_name: str):
-    return await get_dellin_city_code(session, city_name)

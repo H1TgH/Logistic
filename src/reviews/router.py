@@ -15,7 +15,7 @@ from src.users.utils import get_current_user
 
 review_router = APIRouter()
 
-@review_router.post('/api/v1/reviews', tags=['reviews'])
+@review_router.post('/api/v1/public/reviews', tags=['reviews'])
 async def create_review(
     sesion: SessionDep,
     user_review: ReviewCreateSchema,
@@ -66,6 +66,13 @@ async def get_reviews(
     result_replies = await sesion.execute(query_replies)
     all_replies = result_replies.scalars().all()
 
+    # Получаем всех нужных пользователей
+    user_ids = {r.user_id for r in main_reviews + all_replies}
+    query_users = select(UserModel).where(UserModel.id.in_(user_ids))
+    result_users = await sesion.execute(query_users)
+    users = result_users.scalars().all()
+    user_map = {u.id: u.username for u in users}
+
     reply_map = defaultdict(list)
     for reply in all_replies:
         if len(reply_map[reply.parent_id]) < 3:
@@ -74,8 +81,24 @@ async def get_reviews(
     response = []
     for main in main_reviews:
         response.append(ReviewWithRepliesSchema(
-            **main.__dict__,
-            replies=[ReviewResponseSchema(**r.__dict__) for r in reply_map.get(main.id, [])]
+            id=main.id,
+            user_id=main.user_id,
+            username=user_map.get(main.user_id, 'Неизвестно'),
+            review=main.review,
+            rate=main.rate,
+            created_at=main.created_at,
+            parent_id=main.parent_id,
+            replies=[
+                ReviewResponseSchema(
+                    id=r.id,
+                    user_id=r.user_id,
+                    username=user_map.get(r.user_id, 'Неизвестно'),
+                    review=r.review,
+                    rate=r.rate,
+                    created_at=r.created_at,
+                    parent_id=r.parent_id
+                ) for r in reply_map.get(main.id, [])
+            ]
         ))
 
     return response
