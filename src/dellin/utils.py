@@ -15,7 +15,7 @@ AVAILABLE_DELIVERY_TYPE = ['auto', 'express', 'avia']
 
 # URL для логотипа и сайта Деловых Линий
 DELLIN_BASE_URL = 'https://www.dellin.ru'
-DELLIN_LOGO = 'https://www.dellin.ru/assets/images/logo.svg'
+DELLIN_LOGO = 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b4/Dellin_Logo_Black.svg/244px-Dellin_Logo_Black.svg.png'
 
 # Формируем путь к terminals_v3.json относительно текущего файла
 current_dir = os.path.dirname(os.path.abspath(__file__))
