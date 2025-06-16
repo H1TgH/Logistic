@@ -10,7 +10,10 @@ from src.models import DeliveryAPICredentials
 from src.database import SessionDep
 from src.calculator.schemas import DeliveryPackage
 from src.pecom.utils import clean_address_with_dadata
+from src.logger import setup_logger
 
+
+logger = setup_logger('dellin')
 
 AVAILABLE_DELIVERY_TYPE = ['auto', 'express', 'avia']
 
@@ -72,6 +75,7 @@ async def get_dellin_token(session: SessionDep) -> str:
 async def get_dellin_city_code(session: SessionDep, city_name: str) -> str:
     appkey = await get_dellin_token(session)
 
+    logger.info(f"Запрос кода города Деловых Линий. Город: {city_name}")
     async with httpx.AsyncClient() as client:
         response = await client.post(
             'https://api.dellin.ru/v2/public/kladr.json',
@@ -79,13 +83,14 @@ async def get_dellin_city_code(session: SessionDep, city_name: str) -> str:
         )
         
         if response.status_code != 200:
-            print(f"Failed to fetch city code for '{city_name}': {response.text}")
+            logger.error(f"Ошибка получения кода города Деловых Линий. Статус: {response.status_code}, Ответ: {response.text}")
             return None
         
         data = response.json()
+        logger.info(f"Ответ поиска города Деловых Линий: {data}")
         cities = data.get('cities', [])
         if not cities:
-            print(f"City '{city_name}' not found in Dellin API response")
+            logger.error(f"Город '{city_name}' не найден в API Деловых Линий")
             return None
         
         return cities[0].get('code')
@@ -135,7 +140,7 @@ async def calculate_dellin_delivery(
             to_terminal_id = get_terminal_id(to_city_code, TERMINALS_DATA, delivery_mode) if arrival_variant == 'terminal' else None
 
             if not from_terminal_id or not to_terminal_id:
-                print(f"Пропускаем {delivery_mode}, так как не найдены подходящие терминалы")
+                logger.warning(f"Пропускаем {delivery_mode}, так как не найдены подходящие терминалы")
                 continue
 
             # Формируем payload
@@ -174,6 +179,7 @@ async def calculate_dellin_delivery(
                 }
             }
 
+            logger.info(f"Запрос расчета стоимости Деловых Линий ({delivery_mode}). Параметры: {payload}")
             try:
                 response = await client.post(
                     'https://api.dellin.ru/v2/calculator.json',
@@ -182,11 +188,11 @@ async def calculate_dellin_delivery(
                 response.raise_for_status()
 
                 data = response.json()
-                print(f"Ответ API Деловых Линий для {delivery_mode}: {data}")
+                logger.info(f"Ответ расчета стоимости Деловых Линий ({delivery_mode}): {data}")
 
                 # Извлекаем данные из ответа
                 if data.get('metadata', {}).get('status') != 200:
-                    print(f"Ошибка API Деловых Линий для {delivery_mode}: {data}")
+                    logger.error(f"Ошибка API Деловых Линий для {delivery_mode}: {data}")
                     continue
 
                 response_data = data.get('data', {})
@@ -196,41 +202,29 @@ async def calculate_dellin_delivery(
                 if not price:
                     price = response_data.get(delivery_mode, {}).get('price', 0)
                     if not price:
-                        print(f"Не удалось извлечь стоимость для {delivery_mode}: {response_data}")
+                        logger.error(f"Не удалось получить стоимость доставки для {delivery_mode}")
                         continue
 
                 # Сроки доставки
-                order_dates = response_data.get('orderDates', {})
-                arrival_date_min = order_dates.get('giveoutFromOspReceiver', None)
-                arrival_date_max = order_dates.get('giveoutFromOspReceiverMax', None)
+                period_min = response_data.get('period', {}).get('min', 0)
+                period_max = response_data.get('period', {}).get('max', 0)
 
-                period_min = 0
-                period_max = 0
-                if arrival_date_min and arrival_date_max:
-                    try:
-                        arrival_min = datetime.strptime(arrival_date_min.split()[0], '%Y-%m-%d')
-                        arrival_max = datetime.strptime(arrival_date_max.split()[0], '%Y-%m-%d')
-                        period_min = (arrival_min - produce_date).days
-                        period_max = (arrival_max - produce_date).days
-                    except ValueError as e:
-                        print(f"Ошибка при парсинге дат: {e}")
-                        period_min = period_max = response_data.get('deliveryTerm', 0)
-
-                # Формируем результат
                 results.append({
-                    'service_name': f'Деловые Линии ({delivery_mode})',
-                    'delivery_sum': float(price),
+                    'delivery_sum': price,
                     'period_min': period_min,
                     'period_max': period_max,
+                    'service_name': f'Деловые Линии ({delivery_mode})',
                     'service_url': DELLIN_BASE_URL,
-                    'service_logo': DELLIN_LOGO
+                    'service_logo': DELLIN_LOGO,
                 })
 
-            except httpx.HTTPStatusError as e:
-                print(f"HTTP ошибка при запросе к Dellin API для {delivery_mode}: {e.response.text}")
+            except Exception as e:
+                logger.error(f"Ошибка при расчете стоимости Деловых Линий ({delivery_mode}): {str(e)}")
                 continue
 
     if not results:
+        logger.error("Не удалось получить данные о стоимости доставки от Деловых Линий")
         raise ValueError("Не удалось получить данные о стоимости доставки от Деловых Линий")
 
+    logger.info(f"Успешно получены результаты расчета Деловых Линий: {results}")
     return results

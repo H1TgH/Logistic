@@ -143,13 +143,14 @@ async def calculate_pecom_delivery(
         "deliver[town]": to_city_id,
     }
 
-    logger.info(f"Параметры запроса к ПЭК: {params}")
+    logger.info(f"Запрос расчета стоимости ПЭК. Параметры: {params}")
 
     async with httpx.AsyncClient() as client:
         response = await client.get(PECOM_CALC_URL, params=params)
         response.raise_for_status()
 
     data = response.json()
+    logger.info(f"Ответ расчета стоимости ПЭК: {data}")
 
     # Базовая стоимость в зависимости от delivery_type
     base_price = 0.0
@@ -200,5 +201,5 @@ async def calculate_pecom_delivery(
         logger.error("Не удалось получить данные о стоимости доставки от ПЭК")
         raise ValueError("Не удалось получить данные о стоимости доставки от ПЭК")
 
-    logger.info(f"Успешно получены результаты расчета ПЭК: {len(results)} вариантов доставки")
+    logger.info(f"Успешно получены результаты расчета ПЭК: {results}")
     return results

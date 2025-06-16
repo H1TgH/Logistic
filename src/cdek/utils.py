@@ -7,7 +7,10 @@ from sqlalchemy.future import select
 from src.database import SessionDep
 from src.models import DeliveryAPICredentials
 from src.cdek.schemas import DeliveryPackage
+from src.logger import setup_logger
 
+
+logger = setup_logger('cdek')
 
 DELIVERY_TYPE_TO_TARIFF = {
     1: 136,  # Склад-Склад
@@ -42,6 +45,7 @@ async def get_cdek_token(session: SessionDep) -> str:
         session.add(creds)
         await session.commit()
 
+    logger.info(f"Запрос токена CDEK. Параметры: grant_type=client_credentials, client_id={creds.client_login}")
     async with httpx.AsyncClient() as client:
         response = await client.post(
             CDEK_AUTH_URL,
@@ -54,9 +58,11 @@ async def get_cdek_token(session: SessionDep) -> str:
         )
 
     if response.status_code != 200:
+        logger.error(f"Ошибка получения токена CDEK. Статус: {response.status_code}, Ответ: {response.text}")
         raise Exception(f'Failed to get CDEK token: {response.text}')
 
     data = response.json()
+    logger.info(f"Успешно получен токен CDEK. Ответ: {data}")
     token = data['access_token']
     expires_in = data['expires_in']
     expires_at = now + timedelta(seconds=expires_in)
@@ -112,11 +118,13 @@ async def calculate_cdek_delivery(
         'Content-Type': 'application/json'
     }
 
+    logger.info(f"Запрос расчета стоимости CDEK. Параметры: {payload}")
     async with httpx.AsyncClient() as client:
         response = await client.post(CDEK_CALC_URL, json=payload, headers=headers)
         response.raise_for_status()
 
     data = response.json()
+    logger.info(f"Ответ расчета стоимости CDEK: {data}")
     data['service_url'] = CDEK_BASE_URL
     data['service_logo'] = CDEK_LOGO
 
@@ -125,6 +133,7 @@ async def calculate_cdek_delivery(
 async def get_cdek_city_code(session: SessionDep, city_name: str) -> Optional[int]:
     access_token = await get_cdek_token(session)
 
+    logger.info(f"Запрос кода города CDEK. Город: {city_name}")
     async with httpx.AsyncClient() as client:
         response = await client.get(
             "https://api.edu.cdek.ru/v2/location/cities",
@@ -132,10 +141,11 @@ async def get_cdek_city_code(session: SessionDep, city_name: str) -> Optional[in
             params={'country_codes': 'RU', 'city': city_name}
         )
         if response.status_code != 200:
-            print(f"Failed to fetch city code for '{city_name}': {response.text}")
+            logger.error(f"Ошибка получения кода города CDEK. Статус: {response.status_code}, Ответ: {response.text}")
             return None
 
         data = response.json()
+        logger.info(f"Ответ поиска города CDEK: {data}")
         if isinstance(data, list) and data:
             return data[0]['code']
 
