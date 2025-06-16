@@ -11,8 +11,10 @@ from src.reviews.schemas import ReviewCreateSchema, ReviewResponseSchema, Review
 from src.users.models import UserModel
 from src.reviews.models import ReviewModel
 from src.users.utils import get_current_user
+from src.logger import setup_logger
 
 
+logger = setup_logger('reviews')
 review_router = APIRouter()
 
 @review_router.post('/api/v1/public/reviews', tags=['reviews'])
@@ -21,10 +23,12 @@ async def create_review(
     user_review: ReviewCreateSchema,
     current_user: UserModel = Depends(get_current_user)
 ):
+    logger.info(f"Создание нового отзыва пользователем {current_user.username}")
     is_reply = user_review.parent_id is not None
 
     if not is_reply:
         if user_review.rate is None or not (1 <= user_review.rate <= 5):
+            logger.warning(f"Некорректная оценка от пользователя {current_user.username}")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail='Рейтинг обязателен и должен быть от 1 до 5 для основного отзыва'
@@ -32,8 +36,10 @@ async def create_review(
     else:
         parent_review = await sesion.get(ReviewModel, user_review.parent_id)
         if not parent_review:
+            logger.warning(f"Родительский отзыв {user_review.parent_id} не найден")
             raise HTTPException(status_code=404, detail='Родительский отзыв не найден')
         if parent_review.parent_id is not None:
+            logger.warning(f"Попытка ответить на ответ от пользователя {current_user.username}")
             raise HTTPException(status_code=400, detail='Нельзя ответить на ответ')
 
     new_review = ReviewModel(
@@ -46,6 +52,7 @@ async def create_review(
 
     sesion.add(new_review)
     await sesion.commit()
+    logger.info(f"Отзыв успешно создан пользователем {current_user.username}")
     return {'message': 'Отзыв или ответ успешно оставлен.'}
 
 @review_router.get('/api/v1/public/reviews', response_model=List[ReviewWithRepliesSchema], tags=['reviews'])
@@ -54,19 +61,20 @@ async def get_reviews(
     skip: int = Query(0, ge=0),
     limit: int = Query(10, le=100)
 ):
+    logger.info(f"Получение отзывов с пропуском {skip} и лимитом {limit}")
     query_main = select(ReviewModel).where(ReviewModel.parent_id == None).offset(skip).limit(limit)
     result_main = await sesion.execute(query_main)
     main_reviews = result_main.scalars().all()
 
     main_ids = [review.id for review in main_reviews]
     if not main_ids:
+        logger.info("Отзывы не найдены")
         return []
 
     query_replies = select(ReviewModel).where(ReviewModel.parent_id.in_(main_ids))
     result_replies = await sesion.execute(query_replies)
     all_replies = result_replies.scalars().all()
 
-    # Получаем всех нужных пользователей
     user_ids = {r.user_id for r in main_reviews + all_replies}
     query_users = select(UserModel).where(UserModel.id.in_(user_ids))
     result_users = await sesion.execute(query_users)
@@ -101,4 +109,5 @@ async def get_reviews(
             ]
         ))
 
+    logger.info(f"Успешно получено {len(response)} отзывов с ответами")
     return response

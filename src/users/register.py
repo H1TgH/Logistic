@@ -8,12 +8,16 @@ from src.users.schemas import UserRegistrationSchema
 from src.database import SessionDep
 from src.users.models import UserModel
 from src.users.utils import hashing_password, generate_api_key
+from src.logger import setup_logger
 
 
+logger = setup_logger('users.register')
 register_router = APIRouter()
 
 @register_router.post('/api/v1/public/register', tags=['auth'])
 async def register(user_data: UserRegistrationSchema, session: SessionDep):
+    logger.info(f"Попытка регистрации пользователя: {user_data.username} с email: {user_data.email}")
+    
     is_user_exist = await session.execute(
         select(UserModel).
         where(
@@ -23,12 +27,14 @@ async def register(user_data: UserRegistrationSchema, session: SessionDep):
     )
 
     if is_user_exist.scalar():
+        logger.warning(f"Ошибка регистрации - пользователь уже существует: {user_data.username}")
         raise HTTPException (
             status_code=status.HTTP_400_BAD_REQUEST,
             detail='Пользователь с таким адресом электронной почты или логином уже существует.'
         )
 
     if user_data.password != user_data.password_confirm:
+        logger.warning(f"Ошибка регистрации - пароли не совпадают для пользователя: {user_data.username}")
         raise HTTPException (
             status_code=status.HTTP_400_BAD_REQUEST,
             detail='Пароли не совпадают!'
@@ -46,5 +52,6 @@ async def register(user_data: UserRegistrationSchema, session: SessionDep):
 
     session.add(new_user)
     await session.commit()
+    logger.info(f"Успешная регистрация нового пользователя: {user_data.username}")
 
     return {'message': 'Пользователь успешно зарегистрирован.'}
