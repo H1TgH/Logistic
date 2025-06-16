@@ -50,3 +50,32 @@ class DeliveryAPICredentials(Base):
         server_default=func.now(), 
         onupdate=func.now()
     )
+
+class DadataCache(Base):
+    __tablename__ = "dadata_cache"
+
+    id = mapped_column(
+        Integer, 
+        primary_key=True, 
+        index=True
+    )
+    
+    original_address = mapped_column(
+        String, 
+        unique=True, 
+        index=True
+    )
+
+    cleaned_city = mapped_column(
+        String
+    )
+
+    created_at = mapped_column(
+        DateTime(timezone=True), 
+        server_default=func.now()
+    )
+    
+    updated_at = mapped_column(
+        DateTime(timezone=True), 
+        onupdate=func.now()
+    )

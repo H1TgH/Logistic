@@ -41,6 +41,7 @@ async def calculate_delivery(
             to_city_name=request.to_location.city_name,
             packages=request.packages,
             delivery_type=request.delivery_type,
+            session=session,
         )
 
         dellin_coroutine = calculate_dellin_delivery(

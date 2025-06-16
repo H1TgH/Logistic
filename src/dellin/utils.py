@@ -103,8 +103,8 @@ async def calculate_dellin_delivery(
 
     appkey = await get_dellin_token(session)
 
-    from_city = await clean_address_with_dadata(from_location)
-    to_city = await clean_address_with_dadata(to_location)
+    from_city = await clean_address_with_dadata(from_location, session)
+    to_city = await clean_address_with_dadata(to_location, session)
 
     from_city_code = await get_dellin_city_code(session, from_city)
     to_city_code = await get_dellin_city_code(session, to_city)
