@@ -1,29 +1,26 @@
 from datetime import datetime, timedelta
 import httpx
-from sqlalchemy import select
 import json
 import os
 from typing import Optional
+
+from sqlalchemy import select
 
 from src.models import DeliveryAPICredentials
 from src.database import SessionDep
 from src.calculator.schemas import DeliveryPackage
 from src.pecom.utils import clean_address_with_dadata
 
-# Доступные типы межтерминальной перевозки
+
 AVAILABLE_DELIVERY_TYPE = ['auto', 'express', 'avia']
 
-# URL для логотипа и сайта Деловых Линий
 DELLIN_BASE_URL = 'https://www.dellin.ru'
 DELLIN_LOGO = 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b4/Dellin_Logo_Black.svg/244px-Dellin_Logo_Black.svg.png'
 
-# Формируем путь к terminals_v3.json относительно текущего файла
 current_dir = os.path.dirname(os.path.abspath(__file__))
 terminals_path = os.path.join(current_dir, 'terminals_v3.json')
 
-# Загружаем справочник терминалов один раз
 def load_terminals(file_path: str) -> dict:
-    """Загружает JSON-файл со справочником терминалов."""
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
@@ -36,7 +33,6 @@ def load_terminals(file_path: str) -> dict:
         raise ValueError(f"Ошибка парсинга JSON в файле {file_path}: {str(e)}")
 
 def get_terminal_id(city_code: str, terminals_data: dict, delivery_mode: str) -> Optional[str]:
-    """Возвращает первый подходящий terminalID для города по коду КЛАДР и типу доставки."""
     if not isinstance(terminals_data, dict):
         raise TypeError(f"terminals_data должен быть словарем, получен {type(terminals_data)}")
     
@@ -44,16 +40,13 @@ def get_terminal_id(city_code: str, terminals_data: dict, delivery_mode: str) ->
         if city.get('code') == city_code:
             terminals = city.get('terminals', {}).get('terminal', [])
             for terminal in terminals:
-                # Проверяем, оказывает ли терминал услуги по выдаче груза
-                if not terminal.get('giveoutCargo', True):  # Если giveoutCargo=False, пропускаем
+                if not terminal.get('giveoutCargo', True):
                     continue
-                # Проверяем поддержку типа доставки
                 if delivery_mode == 'express':
                     if terminal.get('express', False):
                         print(f"Выбран терминал для {city_code} и {delivery_mode}: {terminal.get('id')} ({terminal.get('name')})")
                         return terminal.get('id')
                 else:
-                    # Для auto и avia проверяем, что терминал вообще доступен
                     print(f"Выбран терминал для {city_code} и {delivery_mode}: {terminal.get('id')} ({terminal.get('name')})")
                     return terminal.get('id')
             print(f"Терминал для города с кодом {city_code} и типом доставки {delivery_mode} не найден")

@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+import asyncio
 
 from src.database import SessionDep
 from src.calculator.schemas import DeliveryRequest, DeliveryResponse, DeliveryResult
@@ -23,20 +24,48 @@ async def calculate_delivery(
         if from_code is None or to_code is None:
             raise HTTPException(status_code=400, detail='Не удалось определить код города')
 
+        # Создаем корутины для каждого сервиса
+        cdek_coroutine = calculate_cdek_delivery(
+            session=session,
+            from_location_code=from_code,
+            to_location_code=to_code,
+            packages=request.packages,
+            date=shipment_date,
+            currency=request.currency,
+            lang=request.lang,
+            delivery_type=request.delivery_type,
+        )
+
+        pecom_coroutine = calculate_pecom_delivery(
+            from_city_name=request.from_location.city_name,
+            to_city_name=request.to_location.city_name,
+            packages=request.packages,
+            delivery_type=request.delivery_type,
+        )
+
+        dellin_coroutine = calculate_dellin_delivery(
+            session=session,
+            from_location=request.from_location.city_name,
+            to_location=request.to_location.city_name,
+            packages=request.packages,
+            delivery_type=request.delivery_type,
+            date=shipment_date,
+        )
+
+        # Запускаем все корутины параллельно
+        cdek_result, pecom_results, dellin_results = await asyncio.gather(
+            cdek_coroutine,
+            pecom_coroutine,
+            dellin_coroutine,
+            return_exceptions=True
+        )
+
         results = []
 
-        # CDEK
-        try:
-            cdek_result = await calculate_cdek_delivery(
-                session=session,
-                from_location_code=from_code,
-                to_location_code=to_code,
-                packages=request.packages,
-                date=shipment_date,
-                currency=request.currency,
-                lang=request.lang,
-                delivery_type=request.delivery_type,
-            )
+        # Обрабатываем результаты CDEK
+        if isinstance(cdek_result, Exception):
+            print(f"CDEK API error: {str(cdek_result)}")
+        else:
             results.append(
                 DeliveryResult(
                     service_name='СДЭК',
@@ -47,17 +76,11 @@ async def calculate_delivery(
                     service_logo=cdek_result['service_logo']
                 )
             )
-        except Exception as e:
-            print(f"CDEK API error: {str(e)}")
 
-        # Pecom (возвращает список результатов)
-        try:
-            pecom_results = await calculate_pecom_delivery(
-                from_city_name=request.from_location.city_name,
-                to_city_name=request.to_location.city_name,
-                packages=request.packages,
-                delivery_type=request.delivery_type,
-            )
+        # Обрабатываем результаты ПЭК
+        if isinstance(pecom_results, Exception):
+            print(f"Pecom API error: {str(pecom_results)}")
+        else:
             for pecom_result in pecom_results:
                 results.append(
                     DeliveryResult(
@@ -69,19 +92,11 @@ async def calculate_delivery(
                         service_logo=pecom_result['service_logo']
                     )
                 )
-        except Exception as e:
-            print(f"Pecom API error: {str(e)}")
 
-        # Dellin
-        try:
-            dellin_results = await calculate_dellin_delivery(
-                session=session,
-                from_location=request.from_location.city_name,
-                to_location=request.to_location.city_name,
-                packages=request.packages,
-                delivery_type=request.delivery_type,
-                date=shipment_date,
-            )
+        # Обрабатываем результаты Деловых Линий
+        if isinstance(dellin_results, Exception):
+            print(f"Dellin API error: {str(dellin_results)}")
+        else:
             for dellin_result in dellin_results:
                 results.append(
                     DeliveryResult(
@@ -93,8 +108,6 @@ async def calculate_delivery(
                         service_logo=dellin_result['service_logo'],
                     )
                 )
-        except Exception as e:
-            print(f"Dellin API error: {str(e)}")
 
         if not results:
             raise HTTPException(status_code=502, detail='Не удалось получить данные ни от одного сервиса')
