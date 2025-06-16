@@ -111,3 +111,67 @@ async def get_reviews(
 
     logger.info(f"Успешно получено {len(response)} отзывов с ответами")
     return response
+
+@review_router.get('/api/v1/reviews/', response_model=List[ReviewWithRepliesSchema], tags=['reviews'])
+async def get_user_reviews(
+    session: SessionDep,
+    user = Depends(get_current_user),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(5, le=100)
+):
+    logger.info(f"Получение отзывов пользователя {user.id} с пропуском {skip} и лимитом {limit}")
+    
+    query_main = select(ReviewModel).where(
+        ReviewModel.user_id == user.id,
+        ReviewModel.parent_id == None
+    ).offset(skip).limit(limit)
+    
+    result_main = await session.execute(query_main)
+    main_reviews = result_main.scalars().all()
+
+    if not main_reviews:
+        logger.info(f"Отзывы пользователя {user.id} не найдены")
+        return []
+
+    main_ids = [review.id for review in main_reviews]
+
+    query_replies = select(ReviewModel).where(ReviewModel.parent_id.in_(main_ids))
+    result_replies = await session.execute(query_replies)
+    all_replies = result_replies.scalars().all()
+
+    user_ids = {r.user_id for r in main_reviews + all_replies}
+    query_users = select(UserModel).where(UserModel.id.in_(user_ids))
+    result_users = await session.execute(query_users)
+    users = result_users.scalars().all()
+    user_map = {u.id: u.username for u in users}
+
+    reply_map = defaultdict(list)
+    for reply in all_replies:
+        if len(reply_map[reply.parent_id]) < 3:
+            reply_map[reply.parent_id].append(reply)
+
+    response = []
+    for main in main_reviews:
+        response.append(ReviewWithRepliesSchema(
+            id=main.id,
+            user_id=main.user_id,
+            username=user_map.get(main.user_id, 'Неизвестно'),
+            review=main.review,
+            rate=main.rate,
+            created_at=main.created_at,
+            parent_id=main.parent_id,
+            replies=[
+                ReviewResponseSchema(
+                    id=r.id,
+                    user_id=r.user_id,
+                    username=user_map.get(r.user_id, 'Неизвестно'),
+                    review=r.review,
+                    rate=r.rate,
+                    created_at=r.created_at,
+                    parent_id=r.parent_id
+                ) for r in reply_map.get(main.id, [])
+            ]
+        ))
+
+    logger.info(f"Успешно получено {len(response)} отзывов пользователя {user.id} с ответами")
+    return response
