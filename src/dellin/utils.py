@@ -18,7 +18,7 @@ logger = setup_logger('dellin')
 AVAILABLE_DELIVERY_TYPE = ['auto', 'express', 'avia']
 
 DELLIN_BASE_URL = 'https://www.dellin.ru'
-DELLIN_LOGO = 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b4/Dellin_Logo_Black.svg/244px-Dellin_Logo_Black.svg.png'
+DELLIN_LOGO = 'https://www.ph4.ru/DL/LOGO/d/dellin__.gif'
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 terminals_path = os.path.join(current_dir, 'terminals_v3.json')
